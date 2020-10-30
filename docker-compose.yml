@@ -26,7 +26,7 @@ services:
         command:
             /mongo-seed/import.sh
     scheduler:
-        image: zephyr168/airflow
+        image: zephyr168/airflow:2.0
         command: scheduler
         restart: on-failure
         depends_on:
@@ -39,7 +39,7 @@ services:
             - ./logs:/opt/airflow/logs
             - ./scripts:/opt/airflow/scripts
     webserver:
-        image: zephyr168/airflow
+        image: zephyr168/airflow:2.0
         entrypoint: ./scripts/entrypoint.sh
         depends_on:
             - postgres

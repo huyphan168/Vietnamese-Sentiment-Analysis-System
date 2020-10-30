@@ -1,3 +1,3 @@
-FROM apache/airflow
+FROM zephyr168/airflow
 COPY ./requirements_prebuild.txt ./requirements_prebuild.txt
 RUN pip install --default-timeout=100 -r ./requirements_prebuild.txt --user 

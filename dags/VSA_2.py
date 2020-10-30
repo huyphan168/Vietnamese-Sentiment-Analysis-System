@@ -6,7 +6,7 @@ from airflow import DAG
 import flask
 import inspect
 from scripts.crawler import Crawler
-from scripts.sentiment_prediction import LSTM_VSA
+from scripts.sentiment_prediction import VSA_BiLSTM, normalize_text
 from scripts.other_statistics import common_stats
 import numpy
 import nltk
@@ -27,9 +27,9 @@ def crawl_task():
 
 
 def sentiment_task():
-    predictor = LSTM_VSA()
+    predictor = VSA_BiLSTM(3000)
     input = "San pham nay tot the nhi"
-    output = predictor.predict(input)
+    output = normalize_text(input)
     print(output) 
 
 
@@ -39,7 +39,7 @@ def statistical_task():
     output = insight_looker.getting_insight(input)
     print(output) 
 
-with DAG('VSA10_dag',
+with DAG('VSA11_dag',
          default_args=default_args,
          schedule_interval='*/5 * * * *',
          max_active_runs=1
