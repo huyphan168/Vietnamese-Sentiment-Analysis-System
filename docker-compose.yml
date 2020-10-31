@@ -28,7 +28,7 @@ services:
     scheduler:
         image: zephyr168/airflow:2.0
         command: scheduler
-        restart: on-failure
+        restart: always
         depends_on:
             - postgres
             - database
@@ -38,6 +38,7 @@ services:
             - ./dags:/opt/airflow/dags
             - ./logs:/opt/airflow/logs
             - ./scripts:/opt/airflow/scripts
+            - ./posts:/opt/airflow/posts
     webserver:
         image: zephyr168/airflow:2.0
         entrypoint: ./scripts/entrypoint.sh
@@ -51,6 +52,7 @@ services:
             - ./dags:/opt/airflow/dags
             - ./logs:/opt/airflow/logs
             - ./scripts:/opt/airflow/scripts
+            - ./posts:/opt/airflow/posts
         ports:
             - "8080:8080"
 volumes: 

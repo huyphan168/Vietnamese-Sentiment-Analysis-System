@@ -5,7 +5,7 @@ from airflow.operators.dummy_operator import DummyOperator
 from airflow import DAG
 import flask
 import inspect
-from scripts.crawler import Crawler
+from scripts.crawler import crawl
 from scripts.sentiment_prediction import VSA_BiLSTM, normalize_text
 from scripts.other_statistics import common_stats
 import numpy
@@ -20,10 +20,12 @@ default_args = {
 }
 
 def crawl_task():
-    crawler = Crawler()
-    input = "huy"
-    output = crawler.crawling(input)
-    print(output)
+    app_id = "392288491810886"
+    app_secret = "1b3342f87bb28ffaef76f80ec1685cbd"  
+    page_id = "meimath"
+    crawl(app_id, app_secret, page_id)
+    print("somethingelse")
+    
 
 
 def sentiment_task():
@@ -39,7 +41,7 @@ def statistical_task():
     output = insight_looker.getting_insight(input)
     print(output) 
 
-with DAG('VSA11_dag',
+with DAG('VSA12_dag',
          default_args=default_args,
          schedule_interval='*/5 * * * *',
          max_active_runs=1

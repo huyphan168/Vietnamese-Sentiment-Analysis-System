@@ -15,12 +15,7 @@ try:
     from urllib.request import urlopen, Request
 except ImportError:
     from urllib2 import urlopen, Request
-
-app_id = "392288491810886"
-app_secret = "1b3342f87bb28ffaef76f80ec1685cbd"  # DO NOT SHARE WITH ANYONE!
-# !!GOOD BOTH FOR PAGE AND FOR GROUPS!!
-# page: https://www.facebook.com/!!THIS PART!!/
-page_id = "meimath"
+dir_air = "/opt/airflow/posts/"
 num_post = 0
 num_comments = 0
 num_comm_per_page = 25
@@ -97,7 +92,7 @@ def scrape_first_posts_in_page(page_id, access_token):
         if key == "next":
             next_value = value
 
-    writeFile("./posts/", str(num_page) + ".next_value.txt", next_value)
+    writeFile(dir_air, str(num_page) + ".next_value.txt", next_value)
     print("\n writing " + str(num_page) + " next_value")
 
     loops_for_scraping_comments(num_page, data)
@@ -117,7 +112,7 @@ def scrape_all_posts_in_page(url, num_page):
     for key, value in next_post.iteritems():
         if key == "next":
             next_value = value
-            writeFile("./posts/", str(num_page) + ".next_value", value)
+            writeFile(dir_air, str(num_page) + ".next_value", value)
             print("\n writing " + str(num_page) + " next_value")
 
     print("\n scraping posts in page: " + str(num_page))
@@ -160,7 +155,7 @@ def loops_for_scraping_comments(num_page, data):
 
         name_file = str(created_time).replace(':', '.') + \
             "page_" + str(num_page) + "_posts" + str(i + 1)
-        writeFile("./posts/", name_file + extension, str(created_time) + "\n\n" +
+        writeFile(dir_air, name_file + extension, str(created_time) + "\n\n" +
                   str(message) + "\n\n" + str(id_post) + "\n\n" + str(comments) + "\n\n")
 
         i = i + 1
@@ -226,11 +221,11 @@ def scrape_all_comments_from_post_id(url):
     return data + scr_data
 
 
-if _name_ == '_main_':
+def crawl(app_id, app_secret, page_id):
 
     filename_n_v = []
 
-    for filename in os.listdir('./posts/'):
+    for filename in os.listdir(dir_air):
         if filename.endswith(".next_value"):
             filename_n_v.append(filename)
 
@@ -265,9 +260,3 @@ if _name_ == '_main_':
 
     print("\nDone!\n{} Comments Processed in {}".format(
         num_processed, datetime.datetime.now() - scrape_starttime))
-class Crawler():
-    
-    def __init__(self):
-        self.x = 1
-        self.y = 2
-        self.client = MongoClient('mongodb://database:27017')
