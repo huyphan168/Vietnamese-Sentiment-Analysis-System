@@ -6,7 +6,7 @@ from airflow import DAG
 import flask
 import inspect
 from scripts.crawler import crawl
-from scripts.sentiment_prediction import VSA_BiLSTM, normalize_text
+from scripts.sentiment_prediction import Estimator
 from scripts.other_statistics import common_stats
 import numpy
 import nltk
@@ -29,10 +29,11 @@ def crawl_task():
 
 
 def sentiment_task():
-    predictor = VSA_BiLSTM(3000)
-    input = "San pham nay tot the nhi"
-    output = normalize_text(input)
-    print(output) 
+    vocab_path = "/opt/airflow/weight_vocab/vocab_ver1.pkl"
+    weight_path = "/opt/airflow/weight_vocab/BiLSTM_Classification_16.pth"
+    estimator = Estimator(weight_path, vocab_path)
+    label = estimator.predict("Alo san pham nay qua te")
+    print("Label is",label) 
 
 
 def statistical_task():
@@ -41,7 +42,7 @@ def statistical_task():
     output = insight_looker.getting_insight(input)
     print(output) 
 
-with DAG('VSA12_dag',
+with DAG('VSA17_dag',
          default_args=default_args,
          schedule_interval='*/5 * * * *',
          max_active_runs=1

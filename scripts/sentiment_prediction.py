@@ -8,8 +8,47 @@ import re
 import string
 import codecs
 from pyvi import ViTokenizer
+import pickle
 
-def normalize_text(text):
+class VSA_BiLSTM(nn.Module):
+  def __init__(self, vocab_size, emb_size=300, hidden_size=512):
+    super(VSA_BiLSTM, self).__init__()
+    self.embedding = nn.Embedding(vocab_size, emb_size)
+    self.hidden_size = hidden_size
+    self.lstm = nn.LSTM(input_size=emb_size,
+                        hidden_size=self.hidden_size,
+                        num_layers=2,
+                        batch_first=True,
+                        bidirectional=True)
+    self.dropout = nn.Dropout(p=0.5)
+
+    self.fc = nn.Linear(2*self.hidden_size,3)
+  def forward(self, text):
+    #Text = [Batch_size, seq_len]
+    text_emb = self.embedding(text)
+    #Text_emb = [Batch_size, seq_len, emb_dim]
+    output, (hidden, cell) = self.lstm(text_emb)
+    #output = [Batch_Size, seq_len, hidden_size*directions]
+    output_forward = torch.squeeze(output[:, -1, :self.hidden_size], 1)
+    output_backward = torch.squeeze(output[:, -1, self.hidden_size:], 1)
+    out_bidirectional = torch.cat((output_forward, output_backward), 1)
+    out_dropped = self.dropout(out_bidirectional)
+    return self.fc(out_dropped)
+
+def read_vocab(path):
+    vocab_file = open(path, "rb")
+    vocab = pickle.load(vocab_file)
+    return vocab
+
+class Estimator():
+  def __init__(self, weight_path, vocab_path):
+    self.vocab = read_vocab(vocab_path)
+    self.size_vocab = len(self.vocab)
+    self.model = VSA_BiLSTM(self.size_vocab)
+    self.model.load_state_dict(
+      torch.load(weight_path, map_location=torch.device('cpu')))
+    self.model.to("cpu")
+  def normalize_text(self,text):
 
     #Remove các ký tự kéo dài: vd: đẹppppppp
     text = re.sub(r'([A-Z])\1+', lambda m: m.group(1).upper(), text, flags=re.IGNORECASE)
@@ -106,30 +145,12 @@ def normalize_text(text):
     text = re.sub("\s\s+", " ",text)
     text = re.sub(r'\b(\w+)( \1\b)+', r'\1', text)
     return text
+  def predict(self, input):
+    text = self.normalize_text(input)
+    indexed = [int(self.vocab[token]) if token in self.vocab.keys() else 0 for token in text]
+    tensor = torch.LongTensor(indexed).unsqueeze(0)
+    label = int(torch.argmax(self.model(tensor),dim = 1).numpy().item())
+    return label
 
-class VSA_BiLSTM(nn.Module):
-  def __init__(self, vocab_size, emb_size=300, hidden_size=512):
-    super(VSA_BiLSTM, self).__init__()
-    self.embedding = nn.Embedding(vocab_size, emb_size)
-    self.hidden_size = hidden_size
-    self.lstm = nn.LSTM(input_size=emb_size,
-                        hidden_size=self.hidden_size,
-                        num_layers=1,
-                        batch_first=True,
-                        bidirectional=True)
-    self.dropout = nn.Dropout(p=0.5)
-
-    self.fc = nn.Linear(2*self.hidden_size,3)
-  def forward(self, text):
-    #Text = [Batch_size, seq_len]
-    text_emb = self.embedding(text)
-    #Text_emb = [Batch_size, seq_len, emb_dim]
-    output, (hidden, cell) = self.lstm(text_emb)
-    #output = [Batch_Size, seq_len, hidden_size*directions]
-    output_forward = torch.squeeze(output[:, -1, :self.hidden_size], 1)
-    output_backward = torch.squeeze(output[:, -1, self.hidden_size:], 1)
-    out_bidirectional = torch.cat((output_forward, output_backward), 1)
-    out_dropped = self.dropout(out_bidirectional)
-    return self.fc(out_dropped)
 
 
