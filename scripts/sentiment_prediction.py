@@ -1,4 +1,4 @@
-import pymongo
+from pymongo import MongoClient
 import torch
 import torchtext
 import torch.nn as nn
@@ -39,6 +39,13 @@ def read_vocab(path):
     vocab_file = open(path, "rb")
     vocab = pickle.load(vocab_file)
     return vocab
+
+def get_input():
+    client = MongoClient('mongodb://database:27017')
+    db = client.database_devC
+    unlabel_comments = db.find({"Label": ""})
+    for doc in ublabel_comments:
+      
 
 class Estimator():
   def __init__(self, weight_path, vocab_path):

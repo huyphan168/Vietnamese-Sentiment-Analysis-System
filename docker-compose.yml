@@ -39,6 +39,7 @@ services:
             - ./logs:/opt/airflow/logs
             - ./scripts:/opt/airflow/scripts
             - ./posts:/opt/airflow/posts
+            - ./weight_vocab:/opt/airflow/weight_vocab
     webserver:
         image: zephyr168/airflow:2.0
         entrypoint: ./scripts/entrypoint.sh
@@ -53,6 +54,7 @@ services:
             - ./logs:/opt/airflow/logs
             - ./scripts:/opt/airflow/scripts
             - ./posts:/opt/airflow/posts
+            - ./weight_vocab:/opt/airflow/weight_vocab
         ports:
             - "8080:8080"
 volumes: 
