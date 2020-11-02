@@ -23,8 +23,7 @@ def crawl_task():
     app_id = "392288491810886"
     app_secret = "1b3342f87bb28ffaef76f80ec1685cbd"  
     page_id = "meimath"
-    crawl(app_id, app_secret, page_id)
-    print("somethingelse")
+    pass
     
 
 
@@ -32,17 +31,16 @@ def sentiment_task():
     vocab_path = "/opt/airflow/weight_vocab/vocab_ver1.pkl"
     weight_path = "/opt/airflow/weight_vocab/BiLSTM_Classification_16.pth"
     estimator = Estimator(weight_path, vocab_path)
-    label = estimator.predict("Alo san pham nay qua te")
+    label = 0
+    for i in range(1000):
+        label = estimator.predict("Chiếc máy này sinh ra để dành cho đối tượng nhân viên công sở nhưng muốn giải trí sau những giờ làm việc căng thẳng, hoặc với dân multimedia muốn một chiếc máy gọn nhẹ nhất có thể")
     print("Label is",label) 
 
 
 def statistical_task():
-    insight_looker = common_stats()
-    input = "id1"
-    output = insight_looker.getting_insight(input)
-    print(output) 
+    pass
 
-with DAG('VSA17_dag',
+with DAG('VSA20_dag',
          default_args=default_args,
          schedule_interval='*/5 * * * *',
          max_active_runs=1

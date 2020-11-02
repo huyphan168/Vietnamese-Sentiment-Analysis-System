@@ -44,7 +44,7 @@ def get_input():
     client = MongoClient('mongodb://database:27017')
     db = client.database_devC
     unlabel_comments = db.find({"Label": ""})
-    for doc in ublabel_comments:
+    
       
 
 class Estimator():
@@ -55,6 +55,7 @@ class Estimator():
     self.model.load_state_dict(
       torch.load(weight_path, map_location=torch.device('cpu')))
     self.model.to("cpu")
+
   def normalize_text(self,text):
 
     #Remove các ký tự kéo dài: vd: đẹppppppp
