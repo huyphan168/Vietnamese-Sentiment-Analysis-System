@@ -3,14 +3,13 @@ import datetime as dt
 from airflow.operators.python_operator import PythonOperator
 from airflow.operators.dummy_operator import DummyOperator
 from airflow import DAG
-import flask
-import inspect
 from scripts.crawler import crawl
 from scripts.sentiment_prediction import Estimator
 from scripts.other_statistics import common_stats
 import numpy
 import nltk
 import pymongo
+
 
 
 default_args = {
@@ -26,7 +25,6 @@ def crawl_task():
     pass
     
 
-
 def sentiment_task():
     vocab_path = "/opt/airflow/weight_vocab/vocab_ver1.pkl"
     weight_path = "/opt/airflow/weight_vocab/BiLSTM_Classification_16.pth"
@@ -37,10 +35,10 @@ def sentiment_task():
     print("Label is",label) 
 
 
-def statistical_task():
+def gender_task():
     pass
 
-with DAG('VSA20_dag',
+with DAG('Catching_1_dag',
          default_args=default_args,
          schedule_interval='*/5 * * * *',
          max_active_runs=1
