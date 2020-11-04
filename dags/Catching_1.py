@@ -9,8 +9,7 @@ from scripts.other_statistics import common_stats
 import numpy
 import nltk
 import pymongo
-
-
+from pymongo import MongoClient
 
 default_args = {
     'owner': 'airflow',
@@ -24,6 +23,14 @@ def crawl_task():
     page_id = "meimath"
     pass
     
+def branching():
+    client = MongoClient('mongodb://database:27017')
+    db = client.database_devC
+    user_col = db.user
+    if True:
+        return "crawling"
+    else:
+        return "skip"
 
 def sentiment_task():
     vocab_path = "/opt/airflow/weight_vocab/vocab_ver1.pkl"
@@ -40,14 +47,19 @@ def gender_task():
 
 with DAG('Catching_1_dag',
          default_args=default_args,
-         schedule_interval='*/5 * * * *',
+         schedule_interval='*/1 * * * *',
          max_active_runs=1
          ) as dag:
-
+    branching = BranchPythonOperator(
+        task_id='branching',
+        python_callable=return_branch,
+        provide_context=True)  
+    skip_opr = DummyOperator(task_id='skip', retries=3)
     dummy_opr = DummyOperator(task_id='dummy', retries=3)
     end_opr = DummyOperator(task_id='dummy_end', retries=3)
     crawl_opr = PythonOperator(task_id="crawling", python_callable=crawl_task)
     sentiment_opr = PythonOperator(task_id="sentiment", python_callable=sentiment_task)
     stats_opr = PythonOperator(task_id="stats", python_callable=statistical_task)
 
-dummy_opr >> [crawl_opr, sentiment_opr, stats_opr] >> end_opr
+dummy_opr >> branching >> crawl_opr >> [sentiment_opr, gender_opr] >> end_opr
+branching >> skip >> end_opr

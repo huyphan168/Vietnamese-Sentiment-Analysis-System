@@ -1,4 +1,3 @@
-from pymongo import MongoClient
 import json
 import datetime
 import csv
@@ -7,7 +6,7 @@ import datetime
 import pprint
 import sys
 import os
-
+import requests
 # set since 3000 recursions, for post with >= 25000 comments
 sys.setrecursionlimit(3000)
 
@@ -15,7 +14,11 @@ try:
     from urllib.request import urlopen, Request
 except ImportError:
     from urllib2 import urlopen, Request
-dir_air = "/opt/airflow/posts/"
+
+app_id = "392288491810886"
+app_secret = "1b3342f87bb28ffaef76f80ec1685cbd"
+access_token = "EAAFkyMg0MEYBAMOtbZBSBLC7ro1W1t6OF7kvgDFNgLSrkosa8U88qxccJkAwj3GSsSQ4ViBZBlNBbeoexEhEj2ZBhNaUzfwYqaHmVExHc0545DFF6DjTgqX2XcDP95LoR1TSABQ4Nv1AA7zIJ3dgoMjZAdrFhp1szjkpfiFpotokSxXvryxRLhnOLQUrCvyMN3gg067m3wZDZD"
+page_id = "meibook2018"
 num_post = 0
 num_comments = 0
 num_comm_per_page = 25
@@ -88,11 +91,11 @@ def scrape_first_posts_in_page(page_id, access_token):
     data = json.loads(json_downloaded)['posts']['data']
     # this are used for take 'next' element in the dictionary
     next_post = json.loads(json_downloaded)['posts']['paging']
-    for key, value in next_post.iteritems():
+    for key, value in next_post:
         if key == "next":
             next_value = value
 
-    writeFile(dir_air, str(num_page) + ".next_value.txt", next_value)
+    writeFile("./posts/", str(num_page) + ".next_value.txt", next_value)
     print("\n writing " + str(num_page) + " next_value")
 
     loops_for_scraping_comments(num_page, data)
@@ -109,10 +112,10 @@ def scrape_all_posts_in_page(url, num_page):
 
     #pp = pprint.PrettyPrinter(indent=2)
     # pp.pprint(next_post)
-    for key, value in next_post.iteritems():
+    for key in next_post:
         if key == "next":
-            next_value = value
-            writeFile(dir_air, str(num_page) + ".next_value", value)
+            next_value = next_post.get("next")
+            writeFile("./posts/", str(num_page) + ".next_value", next_post.get("next"))
             print("\n writing " + str(num_page) + " next_value")
 
     print("\n scraping posts in page: " + str(num_page))
@@ -142,22 +145,31 @@ def loops_for_scraping_comments(num_page, data):
         created_time = data[i]['created_time']
 
         # use get method over the dictionary because the comment couldn't exist and Facebook doesn't generate the corresponding item in the Json file
-        if data[i].get('message') is None:
-            message = ""
-        else:
-            message = data[i].get('message').encode("utf-8")
 
         id_post = data[i]['id']
+        shares_count_json = requests.get("https://graph.facebook.com/v8.0/"+ id_post + "?fields=shares" + "&access_token={}".format(access_token))
+        if shares_count_json.json().get("shares") is None:
+          shares_count = 0
+        else:  
+          shares_count = shares_count_json.json().get("shares").get("count")
         scrape_starttime = datetime.datetime.now()
         comments = scrape_first_comments_from_post_id(id_post, access_token)
         print("   Done! Comment Processed in {}".format(
             datetime.datetime.now() - scrape_starttime))
-
+        # for items in comments:
+        #   comment_id = items["id"]
+        #   comment_url = "https://graph.facebook.com/v8.0/"+ comment_id + 
+        #   requests.get()
         name_file = str(created_time).replace(':', '.') + \
             "page_" + str(num_page) + "_posts" + str(i + 1)
-        writeFile(dir_air, name_file + extension, str(created_time) + "\n\n" +
-                  str(message) + "\n\n" + str(id_post) + "\n\n" + str(comments) + "\n\n")
-
+        dict_data = {
+            "created_time" : str(created_time), 
+            "post_id" : str(id_post),
+            "comments": comments,
+            "shares_count" : shares_count
+        }
+        with open("./posts/" + name_file + extension, 'w', encoding='utf-8') as f:
+          json.dump(dict_data, f, ensure_ascii=False, indent=4)
         i = i + 1
 
 
@@ -191,9 +203,9 @@ def scrape_first_comments_from_post_id(post_id, access_token):
     add_num_comments(comment_count)
 
     # search next post url
-    for key, value in next_post.iteritems():
+    for key in next_post:
         if key == "next":
-            scr_data = scrape_all_comments_from_post_id(value)
+            scr_data = scrape_all_comments_from_post_id(next_post.get("next"))
 
     return data + scr_data
 
@@ -214,18 +226,18 @@ def scrape_all_comments_from_post_id(url):
     # count comments
     add_num_comments(comment_count)
 
-    for key, value in next_post.iteritems():
+    for key in next_post:
         if key == "next":
-            scr_data = scrape_all_comments_from_post_id(value)
+            scr_data = scrape_all_comments_from_post_id(next_post.get("next"))
 
     return data + scr_data
 
 
-def crawl(app_id, app_secret, page_id):
+if _name_ == '_main_':
 
     filename_n_v = []
 
-    for filename in os.listdir(dir_air):
+    for filename in os.listdir('./posts/'):
         if filename.endswith(".next_value"):
             filename_n_v.append(filename)
 
@@ -233,11 +245,7 @@ def crawl(app_id, app_secret, page_id):
 
     print("Request token")
     # new access_token
-    access_token_request = request_until_succeed(
-        "https://graph.facebook.com/v8.0/oauth/access_token?client_id=" + app_id + "&client_secret=" + app_secret + "&grant_type=client_credentials")
-    # access_token = json.loads(access_token_request)[
-    #     "access_token"]  # !type unicode!
-    access_token = "EAAFkyMg0MEYBAOzknCoVLb117ZCNuO3UGiPbCcfVoZCPVXoborBlZATAGIu7FzNRxZBQzXZCryMmfhkMus9XDMhrT6ank4DSZBZA7au03OI777PZAx8ReFQ0G1bfwDZAYzeFdi37PNZAuYxpGZAMnFAWYZBYCPsZBbv2coxvDS4ZB2jigdnoCWlB1G4KbRixPDbNwIoiZBj2TrCkxBxHAZDZD"
+
     print("fresh access token: " + access_token + "\n")
 
     url = "https://graph.facebook.com/v8.0/" + page_id + \
