@@ -7,7 +7,7 @@ import flask
 import inspect
 from scripts.crawler import crawl
 from scripts.sentiment_prediction import Estimator
-from scripts.other_statistics import common_stats
+from scripts.gender import Gender_estimator
 import numpy
 import nltk
 from pymongo import MongoClient

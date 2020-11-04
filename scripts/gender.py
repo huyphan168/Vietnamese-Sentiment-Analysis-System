@@ -1,6 +1,7 @@
 import pymongo
 import joblib
-class common_stats():
+class Gender_estimator():
     def __init__(self):
         self.x = 1
+    
     

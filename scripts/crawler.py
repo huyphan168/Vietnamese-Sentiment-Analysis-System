@@ -232,39 +232,40 @@ def scrape_all_comments_from_post_id(url):
 
     return data + scr_data
 
+def crawl():
+    pass
+# if _name_ == '_main_':
 
-if _name_ == '_main_':
+#     filename_n_v = []
 
-    filename_n_v = []
+#     for filename in os.listdir('./posts/'):
+#         if filename.endswith(".next_value"):
+#             filename_n_v.append(filename)
 
-    for filename in os.listdir('./posts/'):
-        if filename.endswith(".next_value"):
-            filename_n_v.append(filename)
+#     num_page = 1
 
-    num_page = 1
+#     print("Request token")
+#     # new access_token
 
-    print("Request token")
-    # new access_token
+#     print("fresh access token: " + access_token + "\n")
 
-    print("fresh access token: " + access_token + "\n")
+#     url = "https://graph.facebook.com/v8.0/" + page_id + \
+#         "/posts?access_token=" + access_token + "&limit=25"
 
-    url = "https://graph.facebook.com/v8.0/" + page_id + \
-        "/posts?access_token=" + access_token + "&limit=25"
+#     scrape_starttime = datetime.datetime.now()
+#     # start scraping's post phase
+#     print("Scraping's posts phase start...\n")
 
-    scrape_starttime = datetime.datetime.now()
-    # start scraping's post phase
-    print("Scraping's posts phase start...\n")
+#     # start from begin
+#     # scrape_first_posts_in_page(page_id, access_token)
 
-    # start from begin
-    # scrape_first_posts_in_page(page_id, access_token)
+#     # start from a block's posts
+#     # files with next_value extension are:
+#     # 1.next_value = i post from 26 to 50
+#     # 2.next_value = i post from 51 to 75 etc...
+#     scrape_all_posts_in_page(url, num_page)
 
-    # start from a block's posts
-    # files with next_value extension are:
-    # 1.next_value = i post from 26 to 50
-    # 2.next_value = i post from 51 to 75 etc...
-    scrape_all_posts_in_page(url, num_page)
+#     print("\nScraping's posts phase stop...")
 
-    print("\nScraping's posts phase stop...")
-
-    print("\nDone!\n{} Comments Processed in {}".format(
-        num_processed, datetime.datetime.now() - scrape_starttime))
+#     print("\nDone!\n{} Comments Processed in {}".format(
+#         num_processed, datetime.datetime.now() - scrape_starttime))

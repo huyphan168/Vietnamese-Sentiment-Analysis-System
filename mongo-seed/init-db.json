@@ -1,8 +1,10 @@
 [
     {
         "userID": 980213,
-        "Campaigns":[{
+        "Campaigns":
+        [{
             "campaignID":235,
+            "First_attempt": 0, 
             "results": {
                   "positive": {
                                 "points": ["(1012934,12)", "(1012935,20)"],
@@ -25,8 +27,7 @@
                 "access_token": "hsfe",
                 "page_id": "mei",
                 "app_id": 232132,
-                "app_secret": 12334,
-                "first": 0
+                "app_secret": 12334
             }
         }]
     }
