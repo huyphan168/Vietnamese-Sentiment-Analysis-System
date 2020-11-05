@@ -5,7 +5,7 @@ from airflow.operators.dummy_operator import DummyOperator
 from airflow import DAG
 import flask
 import inspect
-from scripts.crawler import crawl
+from scripts.crawler import scrape_all_posts
 from scripts.sentiment_prediction import Estimator
 from scripts.gender import Gender_estimator
 import numpy

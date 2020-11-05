@@ -29,6 +29,127 @@
                 "app_id": 232132,
                 "app_secret": 12334
             }
-        }]
-    }
+        },
+        {
+          "campaignID":239,
+          "First_attempt": 0, 
+          "results": {
+                "positive": {
+                              "points": ["(1012934,12)", "(1012935,20)"],
+                              "percent": "12"
+                            },
+                "neural": {
+                            "points": ["(1012934,20)", "(1012935,8)"],
+                            "percent": "75"
+                          },
+                "negative": 
+                          {
+                            "points": ["(1012934,1)", "(1012935,5)"],
+                            "percent": "12"
+                          },
+                "gender": {
+                            "Male": "41",
+                            "Female": "59"
+                          }},
+          "page_info": {
+              "access_token": "hsfe",
+              "page_id": "mei",
+              "app_id": 232132,
+              "app_secret": 12334
+          }
+      }]
+    },
+    {
+      "userID": 980214,
+      "Campaigns":
+      [{
+          "campaignID":236,
+          "First_attempt": 1, 
+          "results": {
+                "positive": {
+                              "points": ["(1012934,12)", "(1012935,20)"],
+                              "percent": "12"
+                            },
+                "neural": {
+                            "points": ["(1012934,20)", "(1012935,8)"],
+                            "percent": "75"
+                          },
+                "negative": 
+                          {
+                            "points": ["(1012934,1)", "(1012935,5)"],
+                            "percent": "12"
+                          },
+                "gender": {
+                            "Male": "41",
+                            "Female": "59"
+                          }},
+          "page_info": {
+              "access_token": "hsfe",
+              "page_id": "mei",
+              "app_id": 232132,
+              "app_secret": 12334
+          }
+      }]
+  },
+  {
+    "userID": 980215,
+    "Campaigns":
+    [{
+        "campaignID":237,
+        "First_attempt": 0, 
+        "results": {
+              "positive": {
+                            "points": ["(1012934,12)", "(1012935,20)"],
+                            "percent": "12"
+                          },
+              "neural": {
+                          "points": ["(1012934,20)", "(1012935,8)"],
+                          "percent": "75"
+                        },
+              "negative": 
+                        {
+                          "points": ["(1012934,1)", "(1012935,5)"],
+                          "percent": "12"
+                        },
+              "gender": {
+                          "Male": "41",
+                          "Female": "59"
+                        }},
+        "page_info": {
+            "access_token": "hsfe",
+            "page_id": "mei",
+            "app_id": 232132,
+            "app_secret": 12334
+        }
+    },
+    {
+      "campaignID":249,
+      "First_attempt": 0, 
+      "results": {
+            "positive": {
+                          "points": ["(1012934,12)", "(1012935,20)"],
+                          "percent": "12"
+                        },
+            "neural": {
+                        "points": ["(1012934,20)", "(1012935,8)"],
+                        "percent": "75"
+                      },
+            "negative": 
+                      {
+                        "points": ["(1012934,1)", "(1012935,5)"],
+                        "percent": "12"
+                      },
+            "gender": {
+                        "Male": "41",
+                        "Female": "59"
+                      }},
+      "page_info": {
+          "access_token": "hsfe",
+          "page_id": "mei",
+          "app_id": 232132,
+          "app_secret": 12334
+      }
+  }
+  ]
+}
 ]

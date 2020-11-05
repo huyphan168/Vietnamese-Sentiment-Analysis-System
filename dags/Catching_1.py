@@ -3,7 +3,7 @@ import datetime as dt
 from airflow.operators.python_operator import PythonOperator, BranchPythonOperator
 from airflow.operators.dummy_operator import DummyOperator
 from airflow import DAG
-from scripts.crawler import crawl
+from scripts.crawler import scrape_all_posts
 from scripts.sentiment_prediction import Estimator
 from scripts.gender import Gender_estimator
 import numpy
@@ -19,21 +19,35 @@ default_args = {
     'retries': 1
 }
 
-def crawl_task():
-    app_id = "392288491810886"
-    app_secret = "1b3342f87bb28ffaef76f80ec1685cbd"  
-    page_id = "meimath"
+def crawl_task(**kwargs):
+    ti = kwargs["ti"]
+    page_info = ti.xcom_pull(task_ids='branching',key='the_message')
+    print(page_info)
     pass
     
-def branching(**kwargs):
+def branching(**context):
     client = MongoClient('mongodb://database:27017')
     db = client.database_devC
     user_col = db.user
-    pprint(user_col)
-    campaign = user_col.find_one_and_update({"Campaigns.Frist_attempt":0},
-    {"Campaigns":{"Frist_attempt":1}}, 
-    return_document=ReturnDocument.AFTER)
-    if campaign is not None:
+    cp_id = None
+    page_info = []
+    user_campaigns = user_col.find_one({"Campaigns.First_attempt":0})
+    for campaign in user_campaigns["Campaigns"]:
+        if campaign["First_attempt"] == 0:
+            cp_id = campaign["campaignID"]
+            break
+    user_col.update({"Campaigns.campaignID":cp_id},
+                    {'$set':{"Campaigns.$.First_attempt":1}})
+    if cp_id is not None:
+        usr = user_col.find_one({"Campaigns.campaignID":cp_id})
+        for cp in usr["Campaigns"]:
+            if cp["campaignID"] == cp_id:
+                for k, v in cp["page_info"].items():
+                    page_info.append(v)
+        task_instance = context['task_instance']
+        task_instance.xcom_push(key="the_message", value=page_info)
+
+    if cp_id is not None:
         return "crawling"
     else:
         return "skip"
@@ -63,7 +77,7 @@ with DAG('Catching_1_dag_2',
     skip_opr = DummyOperator(task_id='skip', retries=3)
     dummy_opr = DummyOperator(task_id='dummy', retries=3)
     end_opr = DummyOperator(task_id='dummy_end', retries=3)
-    crawl_opr = PythonOperator(task_id="crawling", python_callable=crawl_task)
+    crawl_opr = PythonOperator(task_id="crawling", python_callable=crawl_task,provide_context=True)
     sentiment_opr = PythonOperator(task_id="sentiment", python_callable=sentiment_task)
     gender_opr = PythonOperator(task_id="gender", python_callable=gender_task)
 
