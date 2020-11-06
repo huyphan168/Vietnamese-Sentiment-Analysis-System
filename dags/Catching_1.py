@@ -22,7 +22,9 @@ default_args = {
 def crawl_task(**kwargs):
     ti = kwargs["ti"]
     page_info = ti.xcom_pull(task_ids='branching',key='the_message')
-    print(page_info)
+    arr = scrape_all_posts(page_info["app_id"], page_info["app_secret"],
+                    page_info["access_token"], page_info["page_id"])
+    print(arr)
     pass
     
 def branching(**context):
