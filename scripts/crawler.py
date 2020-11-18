@@ -268,12 +268,10 @@ def scrape_all_posts(app_id, app_secret, access_short_token, page_id):
     response_long = requests.get(long_request_token)
     res_long_token = response_long.json()
     access_token = res_long_token.get("access_token")
-    print("loi: ", access_token)
     post_array = []
     # final_comments = []
     num_page = 1
     url = "https://graph.facebook.com/v8.0/" + page_id + "/posts?access_token=" + access_short_token + "&limit=25"
-
     scrape_starttime = datetime.datetime.now()
     scrape_all_posts_in_page(url, num_page, post_array, access_token)
     # for item in post_array:
@@ -283,4 +281,4 @@ def scrape_all_posts(app_id, app_secret, access_short_token, page_id):
     flatted_cmt_array.sort(key = get_my_key)
     arr = list(filter(filter_function, flatted_cmt_array))
     result_arr = main_modify(arr)
-    return result_arr
+    return result_arr, access_token

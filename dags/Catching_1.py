@@ -14,6 +14,8 @@ import pymongo
 from pymongo import MongoClient
 from pymongo import ReturnDocument
 
+mongo_link = "mongodb+srv://quandat438:quandat10@cluster0.trl9y.mongodb.net/devC?retryWrites=true&w=majority"
+
 default_args = {
     'owner': 'airflow',
     'start_date': dt.datetime(2020, 10, 22, 19, 00, 00),
@@ -23,38 +25,44 @@ default_args = {
 def crawl_task(**context):
     ti = context["ti"]
     page_info = ti.xcom_pull(task_ids='branching',key='the_message')
-    print(page_info)
     app_id, app_secret, access_token, page_id, cp_id = page_info
-    print(app_id)
-    print(app_secret)
-    print(access_token)
-    #arr = scrape_all_posts(app_id, app_secret, access_token, page_id)
-    arr = {"20-11-2019": ["Haha", "Bai nay okay day"],
-           "21-11-2019": ["San pham nay te qua di", "Duoc day"]}
-    client = MongoClient('mongodb://database:27017')
-    db = client.database_devC
+    arr, new_token = scrape_all_posts(app_id, app_secret, access_token, page_id)
+    client = MongoClient(mongo_link)
+    db = client.devC
+    user_col = db.users
     cache_col = db.cache
+    user_col.update({"campaigns.campaignID":cp_id},
+                    {'$set':{"campaigns.$.page_info":
+                    {
+                        "app_id": app_id,
+                        "app_secret": app_secret,
+                        "access_token": new_token,
+                        "page_id": page_id
+                    }}})
+    
+
     cache_col.insert_one({"campaign_id": cp_id, "data": arr})
     tf = context["task_instance"]
     tf.xcom_push(key="cpid", value=page_info)
     
 def branching(**context):
-    client = MongoClient('mongodb://database:27017')
-    db = client.database_devC
-    user_col = db.user
+    client = MongoClient(mongo_link)
+    db = client.devC
+    user_col = db.users
     cp_id = None
     page_info = []
-    user_campaigns = user_col.find_one({"Campaigns.First_attempt":0})
-    for campaign in user_campaigns["Campaigns"]:
-        if campaign["First_attempt"] == 0:
-            cp_id = campaign["campaignID"]
-            break
-    user_col.update({"Campaigns.campaignID":cp_id},
-                    {'$set':{"Campaigns.$.First_attempt":1}})
-    pprint(user_campaigns)
+    user_campaigns = user_col.find_one({"campaigns.flag":0})
+    if user_campaigns:
+        for campaign in user_campaigns["campaigns"]:
+            if campaign["flag"] == 0:
+                cp_id = campaign["campaignID"]
+                break
+        user_col.update({"campaigns.campaignID":cp_id},
+                        {'$set':{"campaigns.$.flag":1}})
+        pprint(user_campaigns)
     if cp_id is not None:
-        usr = user_col.find_one({"Campaigns.campaignID":cp_id})
-        for cp in usr["Campaigns"]:
+        usr = user_col.find_one({"campaigns.campaignID":cp_id})
+        for cp in usr["campaigns"]:
             if cp["campaignID"] == cp_id:
                 for k, v in cp["page_info"].items():
                     page_info.append(v)
@@ -62,7 +70,7 @@ def branching(**context):
         task_instance = context['task_instance']
         task_instance.xcom_push(key="the_message", value=page_info)
 
-    if cp_id is not None:
+    if cp_id:
         return "crawling"
     else:
         return "skip"
@@ -73,8 +81,8 @@ def sentiment_task(**context):
     ti = context["ti"]
     page_info = ti.xcom_pull(task_ids='crawling',key='cpid')
     cp_id = page_info[4]
-    client = MongoClient('mongodb://database:27017')
-    db = client.database_devC
+    client = MongoClient(mongo_link)
+    db = client.devC
     cache_col = db.cache
     document = cache_col.find_one({"campaign_id": cp_id})
     arr = document["data"]
@@ -84,8 +92,9 @@ def sentiment_task(**context):
     pos_points = []
     neg_points = []
     neu_points = []
-    for day in arr.keys():
-        comments = arr[day]
+    for idx in range(len(arr)):
+        day = arr[idx]["created_time"]
+        comments = arr[idx]["comments"]
         num_pos = 0
         num_neg = 0
         num_neu = 0
@@ -126,12 +135,13 @@ def sentiment_task(**context):
                               "Male": male,
                               "Female": female
                             }}
-    user_col = db.user
-    user_col.update({"Campaigns.campaignID":cp_id},
-                    {'$set':{"Campaigns.$.results":result}})
+
+    user_col = db.users
+    user_col.update({"campaigns.campaignID":cp_id},
+                    {'$set':{"campaigns.$.results":result}})
 
 
-with DAG('Catching_1_dag_6',
+with DAG('Catching_1_dag_8',
          default_args=default_args,
          schedule_interval='*/1 * * * *',
          max_active_runs=1

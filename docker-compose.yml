@@ -2,31 +2,22 @@ version: '3.8'
 services:
     postgres:
         image: postgres
-        restart: on-failure
+        restart: on-failure   
         environment:
             - POSTGRES_USER=airflow
             - POSTGRES_PASSWORD=airflow
             - POSTGRES_DB=airflow
             - POSTGRES_HOST_AUTH_METHOD=trust
+            
     database:
         image: mongo
-        container_name: 'database_devC'
-        environment: 
-            - MONGO_INITDB_DATABASE=database_devC
-        volumes: 
-            - ./mongo-volume:/data/db
         ports:
             - '27017:27017'
-    mongo_seed:
-        image: mongo
-        links:
-            - database
-        volumes:
-            - ./mongo-seed:/mongo-seed
-        command:
-            /mongo-seed/import.sh
+        volumes: 
+            - ./data_new:/data/db
+        
     scheduler:
-        image: zephyr168/airflow:2.0
+        image: zephyr168/airflow:3.0
         command: scheduler
         restart: always
         depends_on:
@@ -41,7 +32,7 @@ services:
             - ./posts:/opt/airflow/posts
             - ./weight_vocab:/opt/airflow/weight_vocab
     webserver:
-        image: zephyr168/airflow:2.0
+        image: zephyr168/airflow:3.0
         entrypoint: ./scripts/entrypoint.sh
         depends_on:
             - postgres
@@ -57,6 +48,3 @@ services:
             - ./weight_vocab:/opt/airflow/weight_vocab
         ports:
             - "8080:8080"
-volumes: 
-    mongo-volume:
-        driver: local
