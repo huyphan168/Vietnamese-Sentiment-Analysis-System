@@ -4,7 +4,7 @@ from airflow.operators.python_operator import PythonOperator, BranchPythonOperat
 from airflow.operators.dummy_operator import DummyOperator
 from airflow import DAG
 from scripts.crawler import scrape_all_posts
-from scripts.sentiment_prediction import Estimator
+from scripts.sentiment_prediction import Estimator, normalize_text
 from scripts.gender import Gender_estimator
 import numpy
 import nltk
@@ -31,15 +31,16 @@ def crawl_task(**context):
     all_info = ti.xcom_pull(task_ids='branching',key='the_message')
     print(all_info)
     for page_info in all_info:
-        app_id, app_secret, access_token, page_id, cp_id = page_info
+        app_id, app_secret, access_token, page_id, keyword, cp_id = page_info
         arr, new_token = scrape_all_posts(app_id, app_secret, access_token, page_id)
-        user_col.update({"campaigns.campaignID":cp_id},
+        user_col.update({"campaigns.campaignId":cp_id},
                         {'$set':{"campaigns.$.page_info":
                         {
                             "app_id": app_id,
                             "app_secret": app_secret,
                             "access_token": new_token,
-                            "page_id": page_id
+                            "page_id": page_id,
+                            "keyword": keyword
                         }}})
         
 
@@ -53,18 +54,18 @@ def branching(**context):
     user_col = db.users
     cp_ids = []
     all_info = []
-    users_campaigns = user_col.find({"campaigns.flag":1})
+    users_campaigns = user_col.find({"campaigns.flag":"1"})
     if users_campaigns:
         for user_campaigns in users_campaigns:
             for campaign in user_campaigns["campaigns"]:
-                if campaign["flag"] == 1:
-                    cp_ids.append(campaign["campaignID"])
+                if campaign["flag"] == "1":
+                    cp_ids.append(campaign["campaignId"])
                 
     if len(cp_ids) > 0:
         for cp_id in cp_ids:
-            usr = user_col.find_one({"campaigns.campaignID":cp_id})
+            usr = user_col.find_one({"campaigns.campaignId":cp_id})
             for cp in usr["campaigns"]:
-                if cp["campaignID"] == cp_id:
+                if cp["campaignId"] == cp_id:
                     page_info = []
                     for k, v in cp["page_info"].items():
                         page_info.append(v)
@@ -85,20 +86,19 @@ def sentiment_task(**context):
     client = MongoClient(mongo_link)
     db = client.devC
     cache_col = db.cache
-    vocab_path = "/opt/airflow/weight_vocab/vocab_ver1.pkl"
-    weight_path = "/opt/airflow/weight_vocab/BiLSTM_Classification_16.pth"
-    estimator = Estimator(weight_path, vocab_path)
+    estimator = Estimator()
     ti = context["ti"]
     # Loop through all users
     all_info = ti.xcom_pull(task_ids='crawling',key='cpid')
     for page_info in all_info:
-        cp_id = page_info[4]
+        cp_id = page_info[5]
         document = cache_col.find_one({"campaign_id": cp_id})
-        # cache_col.delete_one({"campaign_id": cp_id})
+        cache_col.delete_one({"campaign_id": cp_id})
         arr = document["data"]
         pos_points = []
         neg_points = []
         neu_points = []
+        ACOM = ""
         for idx in range(len(arr)):
             day = arr[idx]["created_time"]
             comments = arr[idx]["comments"]
@@ -106,6 +106,8 @@ def sentiment_task(**context):
             num_neg = 0
             num_neu = 0
             for comment in comments:
+                comment = normalize_text(comment)
+                ACOM = comment + " " + ACOM
                 label = estimator.predict(comment)
                 if label == 0:
                     num_pos += 1
@@ -124,6 +126,13 @@ def sentiment_task(**context):
         neu_percent = 100 - pos_percent - neg_percent
         male = random.randint(8,15) + 50
         female = 100- male
+        word_freq = {}
+        for word in ACOM.split():
+            if word not in word_freq.keys():
+                word_freq[word] = 1
+            else:
+                word_freq[word] += 1
+        words = [{"text": word, "value": word_freq[word]} for word in word_freq.keys()]
         result = {
                     "positive": {
                                     "points": pos_points,
@@ -141,16 +150,17 @@ def sentiment_task(**context):
                     "gender": {
                                 "Male": male,
                                 "Female": female
-                                }}
+                                },
+                    "words": words}
 
         user_col = db.users
-        user_col.update({"campaigns.campaignID":cp_id},
-                        {'$set':{"campaigns.$.results":result}})
+        user_col.update({"campaigns.campaignId":cp_id},
+                        {'$set':{"campaigns.$.result":result}})
 
 
-with DAG('daily',
+with DAG('daily_1',
          default_args=default_args,
-         schedule_interval='*/1 * * * *',
+         schedule_interval='*/5 * * * *',
          max_active_runs=1
          ) as dag:
     branching = BranchPythonOperator(

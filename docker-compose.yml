@@ -8,43 +8,32 @@ services:
             - POSTGRES_PASSWORD=airflow
             - POSTGRES_DB=airflow
             - POSTGRES_HOST_AUTH_METHOD=trust
-            
-    database:
-        image: mongo
-        ports:
-            - '27017:27017'
-        volumes: 
-            - ./data_new:/data/db
-        
+               
     scheduler:
         image: zephyr168/airflow:3.0
         command: scheduler
         restart: always
         depends_on:
             - postgres
-            - database
         env_file:
             - .env
         volumes:
             - ./dags:/opt/airflow/dags
             - ./logs:/opt/airflow/logs
             - ./scripts:/opt/airflow/scripts
-            - ./posts:/opt/airflow/posts
-            - ./weight_vocab:/opt/airflow/weight_vocab
+            - ./vocab_model:/opt/airflow/vocab_model
     webserver:
         image: zephyr168/airflow:3.0
         entrypoint: ./scripts/entrypoint.sh
         depends_on:
             - postgres
             - scheduler
-            - database
         env_file:
             - .env  
         volumes:
             - ./dags:/opt/airflow/dags
             - ./logs:/opt/airflow/logs
             - ./scripts:/opt/airflow/scripts
-            - ./posts:/opt/airflow/posts
-            - ./weight_vocab:/opt/airflow/weight_vocab
+            - ./vocab_model:/opt/airflow/vocab_model
         ports:
             - "8080:8080"

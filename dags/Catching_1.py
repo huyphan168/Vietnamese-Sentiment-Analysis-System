@@ -4,7 +4,7 @@ from airflow.operators.python_operator import PythonOperator, BranchPythonOperat
 from airflow.operators.dummy_operator import DummyOperator
 from airflow import DAG
 from scripts.crawler import scrape_all_posts
-from scripts.sentiment_prediction import Estimator
+from scripts.sentiment_prediction import Estimator, normalize_text
 from scripts.gender import Gender_estimator
 import numpy
 import nltk
@@ -13,6 +13,7 @@ from pprint import pprint
 import pymongo
 from pymongo import MongoClient
 from pymongo import ReturnDocument
+from datetime import timedelta
 
 mongo_link = "mongodb+srv://quandat438:quandat10@cluster0.trl9y.mongodb.net/devC?retryWrites=true&w=majority"
 
@@ -25,20 +26,21 @@ default_args = {
 def crawl_task(**context):
     ti = context["ti"]
     page_info = ti.xcom_pull(task_ids='branching',key='the_message')
-    app_id, app_secret, access_token, page_id, cp_id = page_info
+    app_id, app_secret, access_token, page_id, keyword, cp_id = page_info
     arr, new_token = scrape_all_posts(app_id, app_secret, access_token, page_id)
     client = MongoClient(mongo_link)
     db = client.devC
     user_col = db.users
     cache_col = db.cache
-    user_col.update({"campaigns.campaignID":cp_id},
+    user_col.update({"campaigns.campaignId":cp_id},
                     {'$set':{"campaigns.$.page_info":
                     {
-                        "app_id": app_id,
-                        "app_secret": app_secret,
-                        "access_token": new_token,
-                        "page_id": page_id
-                    }}})
+                            "app_id": app_id,
+                            "app_secret": app_secret,
+                            "access_token": new_token,
+                            "page_id": page_id,
+                            "keyword": keyword
+                        }}})
     
 
     cache_col.insert_one({"campaign_id": cp_id, "data": arr})
@@ -51,20 +53,22 @@ def branching(**context):
     user_col = db.users
     cp_id = None
     page_info = []
-    user_campaigns = user_col.find_one({"campaigns.flag":0})
+    print(db.list_collection_names)
+    print("vai lon the")
+    user_campaigns = user_col.find_one({"campaigns.flag":"0"})
+    pprint(user_campaigns)
     if user_campaigns:
         for campaign in user_campaigns["campaigns"]:
-            if campaign["flag"] == 0:
-                cp_id = campaign["campaignID"]
+            if campaign["flag"] == "0":
+                cp_id = campaign["campaignId"]
                 break
-        user_col.update({"campaigns.campaignID":cp_id},
-                        {'$set':{"campaigns.$.flag":1}})
-        pprint(user_campaigns)
+        user_col.update({"campaigns.campaignId":cp_id},
+                        {'$set':{"campaigns.$.flag":"1"}})
     if cp_id is not None:
-        usr = user_col.find_one({"campaigns.campaignID":cp_id})
+        usr = user_col.find_one({"campaigns.campaignId":cp_id})
         for cp in usr["campaigns"]:
-            if cp["campaignID"] == cp_id:
-                for k, v in cp["page_info"].items():
+            if cp["campaignId"] == cp_id:
+                for _, v in cp["page_info"].items():
                     page_info.append(v)
         page_info.append(cp_id)
         task_instance = context['task_instance']
@@ -80,18 +84,17 @@ def gender_task():
 def sentiment_task(**context):
     ti = context["ti"]
     page_info = ti.xcom_pull(task_ids='crawling',key='cpid')
-    cp_id = page_info[4]
+    cp_id = page_info[5]
     client = MongoClient(mongo_link)
     db = client.devC
     cache_col = db.cache
     document = cache_col.find_one({"campaign_id": cp_id})
     arr = document["data"]
-    vocab_path = "/opt/airflow/weight_vocab/vocab_ver1.pkl"
-    weight_path = "/opt/airflow/weight_vocab/BiLSTM_Classification_16.pth"
-    estimator = Estimator(weight_path, vocab_path)
+    estimator = Estimator()
     pos_points = []
     neg_points = []
     neu_points = []
+    ACOM = ""
     for idx in range(len(arr)):
         day = arr[idx]["created_time"]
         comments = arr[idx]["comments"]
@@ -99,6 +102,8 @@ def sentiment_task(**context):
         num_neg = 0
         num_neu = 0
         for comment in comments:
+            comment = normalize_text(comment)
+            ACOM = comment + " " + ACOM
             label = estimator.predict(comment)
             if label == 0:
                 num_pos += 1
@@ -117,6 +122,13 @@ def sentiment_task(**context):
     neu_percent = 100 - pos_percent - neg_percent
     male = random.randint(8,15) + 50
     female = 100- male
+    word_freq = {}
+    for word in ACOM.split():
+        if word not in word_freq.keys():
+            word_freq[word] = 1
+        else:
+            word_freq[word] += 1
+    words = [{"text": word, "value": word_freq[word]} for word in word_freq.keys()]
     result = {
                   "positive": {
                                 "points": pos_points,
@@ -134,14 +146,15 @@ def sentiment_task(**context):
                   "gender": {
                               "Male": male,
                               "Female": female
-                            }}
+                            },
+                  "words": words}
 
     user_col = db.users
-    user_col.update({"campaigns.campaignID":cp_id},
-                    {'$set':{"campaigns.$.results":result}})
+    user_col.update({"campaigns.campaignId":cp_id},
+                    {'$set':{"campaigns.$.result":result}})
 
 
-with DAG('Catching_1_dag_8',
+with DAG('Catching_1_dag_10',
          default_args=default_args,
          schedule_interval='*/1 * * * *',
          max_active_runs=1
@@ -153,7 +166,7 @@ with DAG('Catching_1_dag_8',
     skip_opr = DummyOperator(task_id='skip', retries=3)
     dummy_opr = DummyOperator(task_id='dummy', retries=3)
     end_opr = DummyOperator(task_id='dummy_end', retries=3)
-    crawl_opr = PythonOperator(task_id="crawling", python_callable=crawl_task,provide_context=True)
+    crawl_opr = PythonOperator(task_id="crawling", python_callable=crawl_task,provide_context=True,execution_timeout=timedelta(seconds=120))
     sentiment_opr = PythonOperator(task_id="sentiment", python_callable=sentiment_task, provide_context=True)
     gender_opr = PythonOperator(task_id="gender", python_callable=gender_task)
 
