@@ -54,11 +54,11 @@ def branching(**context):
     user_col = db.users
     cp_ids = []
     all_info = []
-    users_campaigns = user_col.find({"campaigns.flag":"1"})
+    users_campaigns = user_col.find({"campaigns.flag":"2"})
     if users_campaigns:
         for user_campaigns in users_campaigns:
             for campaign in user_campaigns["campaigns"]:
-                if campaign["flag"] == "1":
+                if campaign["flag"] == "2":
                     cp_ids.append(campaign["campaignId"])
                 
     if len(cp_ids) > 0:
@@ -98,6 +98,9 @@ def sentiment_task(**context):
         pos_points = []
         neg_points = []
         neu_points = []
+        pos_cmt = []
+        neg_cmt = []
+        neu_cmt = []
         ACOM = ""
         for idx in range(len(arr)):
             day = arr[idx]["created_time"]
@@ -106,15 +109,18 @@ def sentiment_task(**context):
             num_neg = 0
             num_neu = 0
             for comment in comments:
-                comment = normalize_text(comment)
-                ACOM = comment + " " + ACOM
-                label = estimator.predict(comment)
+                comment_norm = normalize_text(comment)
+                ACOM = comment_norm + " " + ACOM
+                label = estimator.predict(comment_norm)
                 if label == 0:
                     num_pos += 1
+                    pos_cmt.append(comment)
                 elif label == 1:
                     num_neu += 1
+                    neu_cmt.append(comment)
                 elif label == 2:
                     num_neg += 1
+                    neg_cmt.append(comment)
             pos_points.append((day, num_pos))
             neg_points.append((day, num_neg))
             neu_points.append((day, num_neu))
@@ -132,20 +138,30 @@ def sentiment_task(**context):
                 word_freq[word] = 1
             else:
                 word_freq[word] += 1
+        if len(pos_cmt) >= 5:
+            pos_cmt = pos_cmt[:5]
+        if len(neg_cmt) >= 5:
+            neg_cmt = neg_cmt[:5]
+        if len(neu_cmt) >= 5:
+            neu_cmt = neu_cmt[:5]
+    
         words = [{"text": word, "value": word_freq[word]} for word in word_freq.keys()]
         result = {
                     "positive": {
                                     "points": pos_points,
-                                    "percent": pos_percent
+                                    "percent": pos_percent,
+                                    "sample": pos_cmt
                                 },
                     "neural": {
                                 "points": neu_points,
-                                "percent": neu_percent
+                                "percent": neu_percent,
+                                "sample": neu_cmt
                                 },
                     "negative": 
                                 {
                                 "points": neg_points,
-                                "percent": neg_percent
+                                "percent": neg_percent,
+                                "sample": neg_cmt
                                 },
                     "gender": {
                                 "Male": male,
