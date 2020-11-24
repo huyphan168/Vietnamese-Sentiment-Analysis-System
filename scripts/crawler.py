@@ -9,7 +9,6 @@ import os
 import requests
 import functools
 import operator
-# set since 3000 recursions, for post with >= 25000 comments
 sys.setrecursionlimit(3000)
 
 try:
@@ -50,29 +49,12 @@ def request_until_succeed(url):
 def get_my_key(obj):
   return obj.get("created_time")[0: 10] 
 
-# def writeFile(path, name, text):
-#     write_file = open(path + name, "w+")
-#     write_file.write(text)
-#     write_file.close()
-
-# The function for taking comments is recursive. Comments are taken 25 at a time.
-# There is a maximum number of recursion for the python interpreter (= 1000).
-# If the post has a number of comments > 25000 (25000/25 = 1000), our interpreter crash.
-# This function is useful for dynamically increase the maximum number of recursions possible by the Python interpreter
-
 
 def set_recursion_limit(total_comments):
     for key, value in total_comments.iteritems():
         if key == "total_count":
             sys.setrecursionlimit(value/num_comm_per_page)
 
-####################################################################
-#                       SCRAPING POSTs                             #
-####################################################################
-
-# first request will be of the type:
-# https://graph.facebook.com/v7.0/v2.11/page_id/posts?access_token=....
-# then, will be gather all the values next in the json file in order to do at the next request
 
 
 def scrape_first_posts_in_page(page_id, access_token):
@@ -126,11 +108,6 @@ def scrape_all_posts_in_page(url, num_page, post_array, access_token):
 
       scrape_all_posts_in_page(next_value, num_page + 1, post_array, access_token)
 
-####################################################################
-#                       SCRAPE POST'S COMMENTS                     #
-####################################################################
-
-# function for scrape single post's comments
 
 
 def loops_for_scraping_comments(num_page, data, post_array, access_token):
@@ -146,42 +123,19 @@ def loops_for_scraping_comments(num_page, data, post_array, access_token):
 
         created_time = data[i]['created_time']
 
-        # use get method over the dictionary because the comment couldn't exist and Facebook doesn't generate the corresponding item in the Json file
-
         id_post = data[i]['id']
-        # shares_count_json = requests.get("https://graph.facebook.com/v8.0/"+ id_post + "?fields=shares" + "&access_token={}".format(access_token))
-        # if shares_count_json.json().get("shares") is None:
-        #   shares_count = 0
-        # else:  
-        #   shares_count = shares_count_json.json().get("shares").get("count")   // shares count (important)
         scrape_starttime = datetime.datetime.now()
         comments = scrape_first_comments_from_post_id(id_post, access_token)
         print("   Done! Comment Processed in {}".format(
             datetime.datetime.now() - scrape_starttime))
-        # for items in comments:
-        #   comment_id = items["id"]
-        #   comment_url = "https://graph.facebook.com/v8.0/"+ comment_id + 
-        #   requests.get()
 
-        # name_file = str(created_time).replace(':', '.') + \
-        #     "page_" + str(num_page) + "_posts" + str(i + 1)
-        
-        # dict_data = {
-        #     "created_time" : str(created_time), 
-        #     "post_id" : str(id_post),
-        #     "comments": comments,
-        #     "shares_count" : shares_count
-        # }                                                                           // json dump (important)
         
         post_array.append(comments)
-        # with open("./posts/" + name_file + extension, 'w', encoding='utf-8') as f:
-        #   json.dump(dict_data, f, ensure_ascii=False, indent=4)
         i = i + 1
 
 
 def scrape_first_comments_from_post_id(post_id, access_token):
-    # with filter=stream should also gather the aswers to comments, but it seems doesn't work
-    # https://graph.facebook.com/v7.0/v2.11/post_id/comments?filter=stream&summary=true&access_token=2081983152047773|cUqdwRV6VnEZBTwAwmv5wdBQEBw
+
     base = "https://graph.facebook.com/v8.0/"
     parameters = "&access_token={}".format(access_token)
     fields = "/comments?filter=stream&summary=true"
